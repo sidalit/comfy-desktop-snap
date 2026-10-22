@@ -1,0 +1,258 @@
+diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
+--- a/src/main/lib/ipc/index.ts
++++ b/src/main/lib/ipc/index.ts
+@@ -64,9 +64,35 @@
+   })
+ }
+ 
+-export function register(callbacks: RegisterCallbacks = {}): Promise<void> {
++export async function register(callbacks: RegisterCallbacks = {}): Promise<void> {
+   setCallbacks(callbacks)
+   wireReleaseCacheBroadcast()
++
++  if (process.env.SNAP) {
++    // The separate comfyui snap owns the local server and its runtime.
++    const remoteUrl = process.env.COMFYUI_SERVER_URL || 'http://127.0.0.1:8188'
++    try {
++      const all = await installations.list()
++      if (!all.some((installation) => installation.id === 'snap-server')) {
++        await installations.add({
++          id: 'snap-server',
++          name: 'ComfyUI (snap)',
++          sourceId: 'remote',
++          sourceLabel: 'ComfyUI (snap)',
++          version: 'remote',
++          remoteUrl,
++          launchMode: 'window',
++          browserPartition: 'shared',
++          status: 'installed'
++        })
++      }
++      if (settings.get('firstUseCompleted') !== true) {
++        settings.set('autoLaunchOnStartup', 'snap-server')
++      }
++    } catch (err) {
++      console.warn('[ipc] Could not register the local ComfyUI server:', err)
++    }
++  }
+ 
+   // These startup writes go through loadForWrite(), which rejects when
+   // installations.json cannot be safely modified right now (locked or corrupt,
+@@ -101,7 +127,7 @@
+   installations.enforceCloudName().catch(warnStartupWrite('enforceCloudName'))
+ 
+   // Auto-track a detected Legacy Desktop install.
+-  {
++  if (!process.env.SNAP) {
+     const desktopInfo = detectDesktopInstall()
+     if (desktopInfo) {
+       installations
+diff --git a/src/main/lib/ipc/sessionActions/launch.ts b/src/main/lib/ipc/sessionActions/launch.ts
+--- a/src/main/lib/ipc/sessionActions/launch.ts
++++ b/src/main/lib/ipc/sessionActions/launch.ts
+@@ -1755,7 +1755,7 @@
+     })
+     try {
+       await waitForUrl(launchCmd.url!, {
+-        timeoutMs: 15000,
++        timeoutMs: installationId === 'snap-server' ? 120000 : 15000,
+         signal: abort.signal,
+         onPoll: ({ elapsedMs }) => {
+           const secs = Math.round(elapsedMs / 1000)
+diff --git a/src/main/lib/updater.ts b/src/main/lib/updater.ts
+--- a/src/main/lib/updater.ts
++++ b/src/main/lib/updater.ts
+@@ -195,6 +195,7 @@
+ }
+ 
+ function isSystemPackageInstall(): boolean {
++  if (process.env.SNAP) return true
+   if (process.platform !== 'linux' || !app.isPackaged) return false
+   if (process.env.APPIMAGE) return false
+   // .deb installs place the app under /opt/ or /usr/; check the executable path
+@@ -295,7 +296,10 @@
+ export function syncInstallOnQuitPolicy(): void {
+   try {
+     electronAutoUpdater.autoInstallOnAppQuit =
+-      !_installOnQuitSuppressedForSession && !isStartupInstallEnabled() && isAutoInstallEnabled()
++      !process.env.SNAP &&
++      !_installOnQuitSuppressedForSession &&
++      !isStartupInstallEnabled() &&
++      isAutoInstallEnabled()
+   } catch {}
+ }
+ 
+@@ -403,6 +407,7 @@
+ }
+ 
+ function getAutoUpdater() {
++  if (process.env.SNAP) return undefined
+   return todesktop.autoUpdater
+ }
+ 
+@@ -664,6 +669,9 @@
+ export function runCheck(
+   source: string
+ ): Promise<{ available: boolean; version?: string; error?: string }> {
++  if (process.env.SNAP) {
++    return Promise.resolve({ available: false, error: 'Updates are managed by snap refresh.' })
++  }
+   return checkForUpdate(source)
+ }
+ 
+@@ -712,6 +720,7 @@
+  * share a single implementation.
+  */
+ export async function downloadUpdate(): Promise<void> {
++  if (process.env.SNAP) return
+   _userInitiatedDownload = true
+   emitUpdateTelemetry(
+     'comfy.desktop.app_update.download_started',
+@@ -752,6 +761,7 @@
+  * system-modal "Restart" confirm) share a single implementation.
+  */
+ export function installUpdate(userInitiated = true): void {
++  if (process.env.SNAP) return
+   const updateSource = userInitiated ? 'install_call' : 'startup_install'
+   if (isSessionEnding()) {
+     // The OS is shutting down / logging off. Spawning the installer now risks
+@@ -1263,6 +1273,10 @@
+ }
+ 
+ export function register(): void {
++  if (process.env.SNAP) {
++    electronAutoUpdater.autoDownload = false
++    electronAutoUpdater.autoInstallOnAppQuit = false
++  }
+   bindUpdaterEvents()
+ 
+   // Reconcile install-on-quit with current settings (see
+@@ -1303,6 +1317,8 @@
+   // arrive via the `app-update:state-changed` event.
+   ipcMain.handle('get-app-update-state', () => getCurrentUpdateState())
+ 
++  if (process.env.SNAP) return
++
+   // Issue #488 — always check on startup and periodically. The
+   // user-controllable `autoInstallUpdates` setting only gates whether
+   // a discovered update silently downloads + installs vs prompts the
+diff --git a/src/main/settings.ts b/src/main/settings.ts
+--- a/src/main/settings.ts
++++ b/src/main/settings.ts
+@@ -151,7 +151,7 @@
+ 
+ const dataPath = path.join(configDir(), 'settings.json')
+ 
+-const SHARED_ROOT = path.join(defaultDataRoot(), 'ComfyUI-Shared')
++const SHARED_ROOT = process.env.SNAP_USER_COMMON || path.join(defaultDataRoot(), 'ComfyUI-Shared')
+ 
+ /** Scalar shapes allowed as a telemetry property value. Arrays/objects are
+  *  never emitted (they'd leak paths/PII and blow up cardinality). */
+diff --git a/src/main/sources/index.ts b/src/main/sources/index.ts
+--- a/src/main/sources/index.ts
++++ b/src/main/sources/index.ts
+@@ -17,4 +17,5 @@
+   comfybuilder
+ ]
+ 
+-export default sources
++// Installed environments remain owned by snap refresh, not Desktop's installer.
++export default process.env.SNAP ? [remote, cloud] : sources
+diff --git a/src/renderer/src/panel/PanelApp.vue b/src/renderer/src/panel/PanelApp.vue
+--- a/src/renderer/src/panel/PanelApp.vue
++++ b/src/renderer/src/panel/PanelApp.vue
+@@ -673,7 +673,7 @@
+         v-else-if="currentOverlay.component === 'first-use'"
+         ref="firstUseRef"
+         @complete-cloud="handleFirstUseComplete"
+-        @complete-skip="completeFirstUseAndDismiss"
++        @complete-skip="completeFirstUseAndDismiss(true)"
+         @chain-local="handleFirstUseChainLocal"
+         @chain-migrate="handleFirstUseChainMigrate"
+       />
+diff --git a/src/renderer/src/panel/useFirstUseChain.ts b/src/renderer/src/panel/useFirstUseChain.ts
+--- a/src/renderer/src/panel/useFirstUseChain.ts
++++ b/src/renderer/src/panel/useFirstUseChain.ts
+@@ -54,7 +54,7 @@
+    *  back-to-dashboard button hides during a chain. */
+   chainingFirstUseToNewInstall: Ref<boolean>
+   /** FirstUseTakeover `complete-skip` emit + file-menu Skip Onboarding. */
+-  completeFirstUseAndDismiss: () => Promise<void>
++  completeFirstUseAndDismiss: (launchServer?: boolean) => Promise<void>
+   /** FirstUseTakeover `complete-cloud` emit. */
+   handleFirstUseComplete: () => Promise<void>
+   /** FirstUseTakeover `chain-local` emit. Optional payload flags
+@@ -201,7 +201,7 @@
+    *  all run the same `markFirstUseCompleted` → dismiss sequence;
+    *  extracting the pair keeps them in sync if the gate flip ever
+    *  needs extra state cleanup. */
+-  async function completeFirstUseAndDismiss(): Promise<void> {
++  async function completeFirstUseAndDismiss(launchServer = false): Promise<void> {
+     // Clear chain state so the auto-launch watcher doesn't fire after
+     // a Skip Onboarding triggered mid-chain (the user wants OUT of
+     // onboarding, not to land on a freshly-installed Comfy).
+@@ -213,6 +213,18 @@
+     // new-install / progress takeover in the slot, so push it
+     // explicitly to keep the file-menu builder in steady state.
+     window.api.setFirstUseMode('none')
++    if (launchServer) {
++      try {
++        const all = await window.api.getInstallations()
++        const server = all.find((installation) => installation.id === 'snap-server')
++        if (server) {
++          const outcome = await opts.performChooserLaunch(server, opts.dismissTakeoverDirect)
++          if (outcome === 'launched') return
++        }
++      } catch (err) {
++        console.warn('Could not open the local ComfyUI server:', err)
++      }
++    }
+     opts.dismissTakeoverDirect()
+   }
+ 
+diff --git a/src/renderer/src/views/InstallWizardModal.vue b/src/renderer/src/views/InstallWizardModal.vue
+--- a/src/renderer/src/views/InstallWizardModal.vue
++++ b/src/renderer/src/views/InstallWizardModal.vue
+@@ -91,7 +91,10 @@
+ })
+ const workspaceInstallMode = ref<'managed' | 'public'>('managed')
+ const managedBuildMode = computed(
+-  () => managedWorkspaceId.value !== null && workspaceInstallMode.value === 'managed'
++  () =>
++    sources.value.some((source) => source.id === 'standalone') &&
++    managedWorkspaceId.value !== null &&
++    workspaceInstallMode.value === 'managed'
+ )
+ const localInstallMode = computed(() => !managedBuildMode.value)
+ 
+@@ -116,7 +119,9 @@
+   const standaloneIndex = tabs.findIndex(
+     (tab) => tab.kind === 'source' && tab.source.id === 'standalone'
+   )
+-  tabs.splice(standaloneIndex + 1, 0, { key: 'managed', kind: 'managed' })
++  if (standaloneIndex !== -1) {
++    tabs.splice(standaloneIndex + 1, 0, { key: 'managed', kind: 'managed' })
++  }
+ 
+   return tabs
+ })
+@@ -672,6 +677,9 @@
+   defaultInstPath.value = installDir ?? ''
+   instPath.value = defaultInstPath.value
+ 
++  await loadSources()
++  if (gen !== modeGeneration) return
++
+   if (managedBuildMode.value) {
+     await Promise.all([initializeManagedBuilds(gen, refreshManagedBuilds), loadSources()])
+   } else {
+@@ -734,7 +742,8 @@
+   await loadSources()
+   if (gen !== modeGeneration || !localInstallMode.value) return
+ 
+-  const source = requestedSource ?? sources.value.find((source) => source.id === 'standalone')
++  const source =
++    requestedSource ?? sources.value.find((source) => source.id === 'standalone') ?? sources.value[0]
+   if (!source) return
+ 
+   if (source.id !== 'standalone') {

@@ -1,0 +1,81 @@
+name: comfyui-desktop
+base: core26
+version: '1.1.8'
+title: Comfy Desktop
+summary: Desktop application for ComfyUI generative AI workflows
+description: |
+  Comfy Desktop provides a desktop interface for ComfyUI workflows, with
+  support for local and remote servers. The comfyui snap supplies the local
+  server and GPU runtime separately and starts its service automatically.
+
+  Launch Comfy Desktop from the application menu or run comfyui-desktop.
+  It connects to the local server at http://127.0.0.1:8188 by default.
+  Models are supplied separately.
+license: AGPL-3.0-or-later
+grade: stable
+confinement: strict
+website: https://www.comfy.org/
+source-code: https://github.com/Comfy-Org/Comfy-Desktop
+issues: https://github.com/Comfy-Org/Comfy-Desktop/issues
+contact: https://github.com/sidalit/comfyui-desktop-snap/issues
+
+platforms:
+  amd64:
+  arm64:
+
+plugs:
+  server:
+    interface: content
+    content: comfyui-server-v1
+    default-provider: comfyui
+    target: $SNAP/server
+
+apps:
+  comfyui-desktop:
+    command: bin/comfyui-desktop
+    extensions: [gnome]
+    plugs:
+      - server
+      - home
+      - network
+      - network-bind
+      - browser-support
+      - audio-playback
+      - password-manager-service
+      - removable-media
+
+parts:
+  desktop:
+    plugin: nil
+    source: https://github.com/Comfy-Org/Comfy-Desktop.git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    build-snaps:
+      - node/24/stable
+    build-packages:
+      - build-essential
+      - python3
+      - ca-certificates
+      - git
+      - patch
+    stage-packages:
+      - libgbm1
+      - libxss1
+    build-environment:
+      - HUSKY: '0'
+    override-pull: |
+      craftctl default
+      patch -p1 < "$CRAFT_PROJECT_DIR/snap/patches/desktop-snap.patch"
+    override-build: |
+      corepack pnpm install --frozen-lockfile
+      corepack pnpm exec electron-vite build
+      corepack pnpm exec electron-builder --linux --dir --publish never \
+        --config "$CRAFT_PROJECT_DIR/snap/electron-builder.yaml"
+
+      mkdir -p "$CRAFT_PART_INSTALL/opt/comfy-desktop" "$CRAFT_PART_INSTALL/server"
+      cp -a dist/linux*-unpacked/. "$CRAFT_PART_INSTALL/opt/comfy-desktop/"
+      rm "$CRAFT_PART_INSTALL/opt/comfy-desktop/chrome-sandbox"
+      install -Dm644 LICENSE "$CRAFT_PART_INSTALL/share/doc/comfy-desktop/LICENSE"
+
+  launcher:
+    plugin: dump
+    source: snap/local

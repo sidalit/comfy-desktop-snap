@@ -1,0 +1,7 @@
+extends: ./electron-builder.yml
+extraMetadata:
+  desktopName: comfyui-desktop_comfyui-desktop.desktop
+linux:
+  executableName: comfy-desktop
+  # The server snap supplies Python; no bootstrap runtime or host AppArmor profile.
+  extraResources: null

@@ -8,12 +8,16 @@ export XDG_CACHE_HOME="$SNAP_USER_COMMON/.cache"
 mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME"
 
 # The content connection supplies configuration, never executable shell code.
-export COMFYUI_SERVER_URL=http://127.0.0.1:8188
-if [[ -r "$SNAP/server/url" ]]; then
-    IFS= read -r COMFYUI_SERVER_URL < "$SNAP/server/url"
-elif [[ ! -e "$SNAP/server/url" ]]; then
-    echo 'Local server configuration is unavailable. Connect it with:' >&2
-    echo '  sudo snap connect comfyui-desktop:server comfyui:server' >&2
+export COMFYUI_SERVER_URL
+COMFYUI_SERVER_URL=$(snapctl get server-url)
+if [[ -z $COMFYUI_SERVER_URL ]]; then
+    if [[ -r "$SNAP/server/url" ]]; then
+        COMFYUI_SERVER_URL=$(< "$SNAP/server/url")
+    else
+        COMFYUI_SERVER_URL=http://127.0.0.1:8188
+        echo 'Local server configuration is unavailable. Connect it with:' >&2
+        echo '  sudo snap connect comfyui-desktop:server comfyui:server' >&2
+    fi
 fi
 
 # Electron handles readiness and connection errors; snapd owns the server.

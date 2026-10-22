@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+server_url=$(snapctl get server-url)
+
+if [[ -n $server_url && ! $server_url =~ ^https?://[^/[:space:]#]+(/[^[:space:]#]*)?$ ]]; then
+    echo 'server-url must be an http:// or https:// URL without spaces or fragments.' >&2
+    exit 1
+fi

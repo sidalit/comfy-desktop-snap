@@ -6,7 +6,7 @@ summary: Desktop application for ComfyUI generative AI workflows
 description: |
   Comfy Desktop provides a desktop interface for ComfyUI workflows, with
   support for local and remote servers. The comfyui snap supplies the local
-  server and GPU runtime separately and starts its service automatically.
+  server and GPU runtime separately, running as a system service.
 
   Launch Comfy Desktop from the application menu or run comfyui-desktop.
   It connects to the local server at http://127.0.0.1:8188 by default.

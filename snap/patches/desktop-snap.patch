@@ -1,7 +1,7 @@
 diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
 --- a/src/main/lib/ipc/index.ts
 +++ b/src/main/lib/ipc/index.ts
-@@ -64,9 +64,35 @@
+@@ -64,9 +64,36 @@
    })
  }
  
@@ -28,6 +28,7 @@ diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
 +          status: 'installed'
 +        })
 +      }
++      await installations.update('snap-server', { remoteUrl })
 +      if (settings.get('firstUseCompleted') !== true) {
 +        settings.set('autoLaunchOnStartup', 'snap-server')
 +      }
@@ -38,7 +39,7 @@ diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
  
    // These startup writes go through loadForWrite(), which rejects when
    // installations.json cannot be safely modified right now (locked or corrupt,
-@@ -101,7 +127,7 @@
+@@ -101,7 +128,7 @@
    installations.enforceCloudName().catch(warnStartupWrite('enforceCloudName'))
  
    // Auto-track a detected Legacy Desktop install.

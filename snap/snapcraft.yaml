@@ -70,9 +70,12 @@ parts:
       craftctl default
       patch -p1 < "$CRAFT_PROJECT_DIR/snap/patches/desktop-snap.patch"
     override-build: |
-      corepack pnpm install --frozen-lockfile
-      corepack pnpm exec electron-vite build
-      corepack pnpm exec electron-builder --linux --dir --publish never \
+      npm install --global --prefix "$CRAFT_PART_BUILD/.pnpm" \
+        "$(node -p "require('./package.json').packageManager.split('+')[0]")"
+      export PATH="$CRAFT_PART_BUILD/.pnpm/bin:$PATH"
+      pnpm install --frozen-lockfile
+      pnpm exec electron-vite build
+      pnpm exec electron-builder --linux --dir --publish never \
         --config "$CRAFT_PROJECT_DIR/snap/electron-builder.yaml"
 
       mkdir -p "$CRAFT_PART_INSTALL/opt/comfy-desktop" "$CRAFT_PART_INSTALL/server"

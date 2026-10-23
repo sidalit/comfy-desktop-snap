@@ -15,8 +15,12 @@ license: AGPL-3.0-or-later
 grade: stable
 confinement: strict
 website: https://www.comfy.org/
-source-code: https://github.com/Comfy-Org/Comfy-Desktop
-issues: https://github.com/Comfy-Org/Comfy-Desktop/issues
+source-code:
+  - https://github.com/Comfy-Org/Comfy-Desktop
+  - https://github.com/sidalit/comfyui-desktop-snap
+issues:
+  - https://github.com/Comfy-Org/Comfy-Desktop/issues
+  - https://github.com/sidalit/comfyui-desktop-snap/issues
 contact: https://github.com/sidalit/comfyui-desktop-snap/issues
 
 platforms:

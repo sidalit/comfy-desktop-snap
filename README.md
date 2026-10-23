@@ -25,10 +25,10 @@ Launch Comfy Desktop from the application menu or use the command above. The `co
 
 Models are not included. In the desktop, open **Manager → Model Manager**, search for a model and select **Install**, then refresh the model list. The server downloads it into the correct subfolder under `/var/snap/comfyui/common/models` and makes it available to workflows. No folder or permission setup is needed.
 
-Use Model Manager for server downloads; a workflow's ordinary **Download** link downloads a file through the browser without installing it on the server. The server selects a compatible NVIDIA GPU or falls back to CPU mode.
+Use Model Manager for server downloads; a workflow's ordinary **Download** link downloads a file through the browser without installing it on the server. On NVIDIA hosts the server adds its `torch-cuda` component automatically (snapd 2.68 or later) and uses a compatible GPU; otherwise it runs in CPU mode. The server's `accelerator` option (`auto`, `cpu` or `cuda`) overrides the choice.
 
 ```bash
-sudo snap set comfyui cpu=true   # optional: force CPU mode
+sudo snap set comfyui accelerator=cpu   # optional: force CPU mode
 sudo snap connect comfyui-desktop:password-manager-service   # optional: sign-in storage
 sudo snap connect comfyui-desktop:removable-media            # optional: /media, /mnt
 ```

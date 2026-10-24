@@ -1,10 +1,10 @@
 # Comfy Desktop snap
 
-[![comfyui-desktop](https://snapcraft.io/comfyui-desktop/badge.svg)](https://snapcraft.io/comfyui-desktop)
+[![comfy-desktop](https://snapcraft.io/comfy-desktop/badge.svg)](https://snapcraft.io/comfy-desktop)
 
 Snap packaging for [Comfy Desktop](https://github.com/Comfy-Org/Comfy-Desktop), a desktop application for ComfyUI generative AI workflows.
 
-Unofficial build, not affiliated with or endorsed by the ComfyUI project.
+Unofficial build, not affiliated with or endorsed by the Comfy project.
 
 ## Build
 
@@ -14,11 +14,11 @@ snapcraft pack
 
 ## Install and try
 
-<a href="https://snapcraft.io/comfyui-desktop"><img alt="Get it from the Snap Store" src="https://snapcraft.io/en/dark/install.svg" width="180"></a>
+<a href="https://snapcraft.io/comfy-desktop"><img alt="Get it from the Snap Store" src="https://snapcraft.io/en/dark/install.svg" width="180"></a>
 
 ```bash
-sudo snap install comfyui-desktop
-comfyui-desktop
+sudo snap install comfy-desktop
+comfy-desktop
 ```
 
 Launch Comfy Desktop from the application menu or use the command above. The `comfyui` server snap is installed as a dependency and starts automatically. The desktop connects to its configured address, defaulting to <http://127.0.0.1:8188>. Closing the desktop leaves the server running. Set `daemon=false` on the server snap to disable automatic startup; the desktop cannot start a stopped server.
@@ -29,19 +29,19 @@ Use Model Manager for server downloads; a workflow's ordinary **Download** link 
 
 ```bash
 sudo snap set comfyui accelerator=cpu   # optional: force CPU mode
-sudo snap connect comfyui-desktop:password-manager-service   # optional: sign-in storage
-sudo snap connect comfyui-desktop:removable-media            # optional: /media, /mnt
+sudo snap connect comfy-desktop:password-manager-service   # optional: sign-in storage
+sudo snap connect comfy-desktop:removable-media            # optional: /media, /mnt
 ```
 
-Desktop settings and downloaded outputs live under `~/snap/comfyui-desktop/common`. You can also add a remote ComfyUI connection in the desktop.
+Desktop settings and downloaded outputs live under `~/snap/comfy-desktop/common`. You can also add a remote ComfyUI connection in the desktop.
 
 ## Configuration
 
 Choose a different server without opening the desktop:
 
 ```bash
-sudo snap set comfyui-desktop server-url=http://192.168.1.20:8188
-sudo snap unset comfyui-desktop server-url   # return to the local server
+sudo snap set comfy-desktop server-url=http://192.168.1.20:8188
+sudo snap unset comfy-desktop server-url   # return to the local server
 ```
 
 The **ComfyUI (snap)** connection follows this configuration on launch. Other connections added in the desktop are unchanged. Reopen the desktop after changing the server's address or port.

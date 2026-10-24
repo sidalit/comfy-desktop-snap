@@ -5,7 +5,8 @@ export HOME="$SNAP_USER_COMMON"
 export XDG_CONFIG_HOME="$SNAP_USER_COMMON/.config"
 export XDG_DATA_HOME="$SNAP_USER_COMMON/.local/share"
 export XDG_CACHE_HOME="$SNAP_USER_COMMON/.cache"
-mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME"
+export XDG_STATE_HOME="$SNAP_USER_COMMON/.local/state"
+mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
 
 # The content connection supplies configuration, never executable shell code.
 export COMFYUI_SERVER_URL
@@ -16,7 +17,7 @@ if [[ -z $COMFYUI_SERVER_URL ]]; then
     else
         COMFYUI_SERVER_URL=http://127.0.0.1:8188
         echo 'Local server configuration is unavailable. Connect it with:' >&2
-        echo '  sudo snap connect comfyui-desktop:server comfyui:server' >&2
+        echo '  sudo snap connect comfy-desktop:server comfyui:server' >&2
     fi
 fi
 

@@ -1,4 +1,4 @@
-name: comfyui-desktop
+name: comfy-desktop
 base: core26
 version: '1.1.8'
 title: Comfy Desktop
@@ -8,7 +8,7 @@ description: |
   support for local and remote servers. The comfyui snap supplies the local
   server and GPU runtime separately, running as a system service.
 
-  Launch Comfy Desktop from the application menu or run comfyui-desktop.
+  Launch Comfy Desktop from the application menu or run comfy-desktop.
   It connects to the local server at http://127.0.0.1:8188 by default.
   Models are supplied separately.
 license: AGPL-3.0-or-later
@@ -17,11 +17,11 @@ confinement: strict
 website: https://www.comfy.org/
 source-code:
   - https://github.com/Comfy-Org/Comfy-Desktop
-  - https://github.com/sidalit/comfyui-desktop-snap
+  - https://github.com/sidalit/comfy-desktop-snap
 issues:
   - https://github.com/Comfy-Org/Comfy-Desktop/issues
-  - https://github.com/sidalit/comfyui-desktop-snap/issues
-contact: https://github.com/sidalit/comfyui-desktop-snap/issues
+  - https://github.com/sidalit/comfy-desktop-snap/issues
+contact: https://github.com/sidalit/comfy-desktop-snap/issues
 
 platforms:
   amd64:
@@ -35,8 +35,8 @@ plugs:
     target: $SNAP/server
 
 apps:
-  comfyui-desktop:
-    command: bin/comfyui-desktop
+  comfy-desktop:
+    command: bin/comfy-desktop
     extensions: [gnome]
     plugs:
       - server

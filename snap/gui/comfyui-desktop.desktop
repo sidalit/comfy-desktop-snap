@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Comfy Desktop
-Comment=Create generative AI workflows with ComfyUI
-Exec=comfyui-desktop
-Icon=${SNAP}/meta/gui/comfyui.png
-Terminal=false
-Categories=Graphics;
-StartupWMClass=comfyui-desktop-2

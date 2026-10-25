@@ -1,18 +1,26 @@
-# Comfy Desktop snap
+<div align="center">
+
+<img src="snap/gui/comfy-desktop.png" alt="Comfy Desktop logo" width="128" />
+
+# Comfy Desktop
+
+**Create generative AI workflows from your Linux desktop.**
 
 [![comfy-desktop](https://snapcraft.io/comfy-desktop/badge.svg)](https://snapcraft.io/comfy-desktop)
+[![Base: core26](https://img.shields.io/badge/Base-core26-2C8C3C?logo=canonical&logoColor=white)](https://snapcraft.io/core26)
+![Confinement: strict](https://img.shields.io/badge/Confinement-strict-2C8C3C)
+[![Maintainer: sidaliteir](https://img.shields.io/badge/Maintainer-sidaliteir-2C8C3C?logo=snapcraft&logoColor=white)](https://snapcraft.io/publisher/sidaliteir)
+![Architectures: amd64 and arm64](https://img.shields.io/badge/Architectures-amd64%20%7C%20arm64-2C8C3C?logo=linux&logoColor=white)
 
-Snap packaging for [Comfy Desktop](https://github.com/Comfy-Org/Comfy-Desktop), a desktop application for ComfyUI generative AI workflows.
+[Getting Started](#getting-started) · [Configure](#configure) · [Limitations](#limitations) · [Build](#build) · [Support](#support) · [License](#license)
 
-Unofficial build, not affiliated with or endorsed by the Comfy project.
+Unofficial snap packaging for [Comfy Desktop](https://github.com/Comfy-Org/Comfy-Desktop), with support for local and remote ComfyUI servers.
 
-## Build
+</div>
 
-```bash
-snapcraft pack
-```
+---
 
-## Install and try
+## Getting Started
 
 <a href="https://snapcraft.io/comfy-desktop"><img alt="Get it from the Snap Store" src="https://snapcraft.io/en/dark/install.svg" width="180"></a>
 
@@ -21,46 +29,54 @@ sudo snap install comfy-desktop
 comfy-desktop
 ```
 
-Launch Comfy Desktop from the application menu or use the command above. The `comfyui` server snap is installed as a dependency and starts automatically. The desktop connects to its configured address, defaulting to <http://127.0.0.1:8188>. Closing the desktop leaves the server running. Set `daemon=false` on the server snap to disable automatic startup; the desktop cannot start a stopped server.
+Launch from the terminal or your application menu. The [`comfyui` server](https://github.com/sidalit/comfyui-snap) is installed and started automatically; closing the desktop leaves it running.
 
-Models are not included. In the desktop, open **Manager → Model Manager**, search for a model and select **Install**, then refresh the model list. The server downloads it into the correct subfolder under `/var/snap/comfyui/common/models` and makes it available to workflows. No folder or permission setup is needed.
+## Configure
 
-Use Model Manager for server downloads; a workflow's ordinary **Download** link downloads a file through the browser without installing it on the server. On NVIDIA hosts the server adds its `torch-cuda` component automatically (snapd 2.68 or later) and uses a compatible GPU; otherwise it runs in CPU mode. The server's `accelerator` option (`auto`, `cpu` or `cuda`) overrides the choice.
-
-```bash
-sudo snap set comfyui accelerator=cpu   # optional: force CPU mode
-sudo snap connect comfy-desktop:password-manager-service   # optional: sign-in storage
-sudo snap connect comfy-desktop:removable-media            # optional: /media, /mnt
-```
-
-Desktop settings and downloaded outputs live under `~/snap/comfy-desktop/common`. You can also add a remote ComfyUI connection in the desktop.
-
-## Configuration
-
-Choose a different server without opening the desktop:
+| Option | Accepted values | Default |
+| --- | --- | --- |
+| `server-url` | An HTTP(S) URL without spaces or fragments; empty or unset for automatic selection. | The connected `comfyui` server's address, falling back to `http://127.0.0.1:8188` if unavailable. |
 
 ```bash
+# Connect to another server
 sudo snap set comfy-desktop server-url=http://192.168.1.20:8188
-sudo snap unset comfy-desktop server-url   # return to the local server
+
+# Return to the local server
+sudo snap unset comfy-desktop server-url
 ```
 
-The **ComfyUI (snap)** connection follows this configuration on launch. Other connections added in the desktop are unchanged. Reopen the desktop after changing the server's address or port.
+Reopen the desktop after changing the server address.
 
-## Known limitations
+Optional permissions:
 
-- Model Manager installs models from its catalog. Downloads require the server's default loopback listener; other remote servers follow their own Manager security policy.
-- Local environment installation is disabled. Upload inputs through the ComfyUI interface.
-- Python and the GPU runtime are provided by the separate [comfyui snap](https://github.com/sidalit/comfyui-snap).
-- The desktop and server update independently through snapd; the desktop's self-updater is disabled.
+```bash
+sudo snap connect comfy-desktop:password-manager-service   # sign-in storage
+sudo snap connect comfy-desktop:removable-media            # /media, /mnt
+```
 
-## Update to a new upstream release
+Desktop settings are stored in `~/snap/comfy-desktop/common`. See the [server configuration](https://github.com/sidalit/comfyui-snap#configure) for GPU and service settings.
 
-Change `version` in `snap/snapcraft.yaml`, then rebuild.
+## Limitations
 
-## Automation
+- Models are downloaded separately. Open **Manager → Model Manager**, choose a model and select **Install**; ordinary browser downloads do not install models on the server.
+- Model Manager downloads use the local server's default loopback address. Remote servers apply their own security policy.
+- Creating local Python environments from the desktop is disabled; the server snap provides the runtime.
+- The desktop cannot start a stopped server. Application updates are managed by snapd.
 
-Builds, publishing, and dependency updates use [snap-automation](https://github.com/sidalit/snap-automation).
+## Build
+
+```bash
+git clone https://github.com/sidalit/comfy-desktop-snap.git
+cd comfy-desktop-snap
+sudo snap install snapcraft --classic
+snapcraft pack
+```
+
+## Support
+
+- **Installation or snap issues:** [open a packaging issue](https://github.com/sidalit/comfy-desktop-snap/issues).
+- **Application bugs:** [report them upstream](https://github.com/Comfy-Org/Comfy-Desktop/issues).
 
 ## License
 
-The packaging is MIT-licensed (see `LICENSE`). Comfy Desktop is AGPL-3.0-or-later-licensed; its dependencies carry their own licenses.
+Snap packaging: [MIT](https://github.com/sidalit/comfy-desktop-snap/blob/main/LICENSE).

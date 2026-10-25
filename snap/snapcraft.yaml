@@ -2,6 +2,7 @@ name: comfy-desktop
 base: core26
 version: '1.1.8'
 title: Comfy Desktop
+icon: snap/gui/comfy-desktop.png
 summary: Desktop application for ComfyUI generative AI workflows
 description: |
   Comfy Desktop provides a desktop interface for ComfyUI workflows, with

@@ -79,7 +79,11 @@ parts:
       - COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
     override-pull: |
       craftctl default
-      patch -p1 < "$CRAFT_PROJECT_DIR/snap/patches/desktop-snap.patch"
+      # After 1.1.9 upstream removed most code comments, which changed the patch context.
+      case "$SNAPCRAFT_PROJECT_VERSION" in
+        1.1.9) patch -p1 < "$CRAFT_PROJECT_DIR/snap/patches/desktop-snap-1.1.9.patch" ;;
+        *) patch -p1 < "$CRAFT_PROJECT_DIR/snap/patches/desktop-snap.patch" ;;
+      esac
     override-build: |
       export PATH="$CRAFT_STAGE/bin:$PATH"
       pnpm install --frozen-lockfile

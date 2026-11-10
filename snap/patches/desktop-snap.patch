@@ -1,7 +1,7 @@
 diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
 --- a/src/main/lib/ipc/index.ts
 +++ b/src/main/lib/ipc/index.ts
-@@ -64,9 +64,36 @@
+@@ -63,10 +63,37 @@
    })
  }
  
@@ -9,7 +9,7 @@ diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
 +export async function register(callbacks: RegisterCallbacks = {}): Promise<void> {
    setCallbacks(callbacks)
    wireReleaseCacheBroadcast()
-+
+ 
 +  if (process.env.SNAP) {
 +    // The separate comfyui snap owns the local server and its runtime.
 +    const remoteUrl = process.env.COMFYUI_SERVER_URL || 'http://127.0.0.1:8188'
@@ -36,13 +36,14 @@ diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
 +      console.warn('[ipc] Could not register the local ComfyUI server:', err)
 +    }
 +  }
- 
-   // These startup writes go through loadForWrite(), which rejects when
-   // installations.json cannot be safely modified right now (locked or corrupt,
-@@ -101,7 +128,7 @@
++
+   const warnStartupWrite = (op: string) => (err: unknown) => {
+     console.warn(`[ipc] Skipped startup installations ${op}:`, err)
+   }
+@@ -93,7 +120,7 @@
+     .catch(warnStartupWrite('ensureExists(cloud)'))
    installations.enforceCloudName().catch(warnStartupWrite('enforceCloudName'))
  
-   // Auto-track a detected Legacy Desktop install.
 -  {
 +  if (!process.env.SNAP) {
      const desktopInfo = detectDesktopInstall()
@@ -51,7 +52,7 @@ diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
 diff --git a/src/main/lib/ipc/sessionActions/launch.ts b/src/main/lib/ipc/sessionActions/launch.ts
 --- a/src/main/lib/ipc/sessionActions/launch.ts
 +++ b/src/main/lib/ipc/sessionActions/launch.ts
-@@ -1755,7 +1755,7 @@
+@@ -1482,7 +1482,7 @@
      })
      try {
        await waitForUrl(launchCmd.url!, {
@@ -63,15 +64,15 @@ diff --git a/src/main/lib/ipc/sessionActions/launch.ts b/src/main/lib/ipc/sessio
 diff --git a/src/main/lib/updater.ts b/src/main/lib/updater.ts
 --- a/src/main/lib/updater.ts
 +++ b/src/main/lib/updater.ts
-@@ -195,6 +195,7 @@
+@@ -123,6 +123,7 @@
  }
  
  function isSystemPackageInstall(): boolean {
 +  if (process.env.SNAP) return true
    if (process.platform !== 'linux' || !app.isPackaged) return false
    if (process.env.APPIMAGE) return false
-   // .deb installs place the app under /opt/ or /usr/; check the executable path
-@@ -295,7 +296,10 @@
+   const appPath = app.getPath('exe')
+@@ -154,7 +155,10 @@
  export function syncInstallOnQuitPolicy(): void {
    try {
      electronAutoUpdater.autoInstallOnAppQuit =
@@ -83,7 +84,7 @@ diff --git a/src/main/lib/updater.ts b/src/main/lib/updater.ts
    } catch {}
  }
  
-@@ -403,6 +407,7 @@
+@@ -250,6 +254,7 @@
  }
  
  function getAutoUpdater() {
@@ -91,7 +92,7 @@ diff --git a/src/main/lib/updater.ts b/src/main/lib/updater.ts
    return todesktop.autoUpdater
  }
  
-@@ -664,6 +669,9 @@
+@@ -441,6 +446,9 @@
  export function runCheck(
    source: string
  ): Promise<{ available: boolean; version?: string; error?: string }> {
@@ -101,23 +102,23 @@ diff --git a/src/main/lib/updater.ts b/src/main/lib/updater.ts
    return checkForUpdate(source)
  }
  
-@@ -712,6 +720,7 @@
-  * share a single implementation.
-  */
+@@ -456,6 +464,7 @@
+ }
+ 
  export async function downloadUpdate(): Promise<void> {
 +  if (process.env.SNAP) return
    _userInitiatedDownload = true
    emitUpdateTelemetry(
      'comfy.desktop.app_update.download_started',
-@@ -752,6 +761,7 @@
-  * system-modal "Restart" confirm) share a single implementation.
-  */
+@@ -489,6 +498,7 @@
+ }
+ 
  export function installUpdate(userInitiated = true): void {
 +  if (process.env.SNAP) return
    const updateSource = userInitiated ? 'install_call' : 'startup_install'
    if (isSessionEnding()) {
-     // The OS is shutting down / logging off. Spawning the installer now risks
-@@ -1263,6 +1273,10 @@
+     return
+@@ -816,6 +826,10 @@
  }
  
  export function register(): void {
@@ -127,28 +128,28 @@ diff --git a/src/main/lib/updater.ts b/src/main/lib/updater.ts
 +  }
    bindUpdaterEvents()
  
-   // Reconcile install-on-quit with current settings (see
-@@ -1303,6 +1317,8 @@
-   // arrive via the `app-update:state-changed` event.
+   syncInstallOnQuitPolicy()
+@@ -843,6 +857,8 @@
+ 
    ipcMain.handle('get-app-update-state', () => getCurrentUpdateState())
  
 +  if (process.env.SNAP) return
 +
-   // Issue #488 — always check on startup and periodically. The
-   // user-controllable `autoInstallUpdates` setting only gates whether
-   // a discovered update silently downloads + installs vs prompts the
+   const runAutoCheck = (): void => {
+     runCheck('auto-check').catch(() => {})
+   }
 diff --git a/src/main/settings.ts b/src/main/settings.ts
 --- a/src/main/settings.ts
 +++ b/src/main/settings.ts
-@@ -151,7 +151,7 @@
+@@ -74,7 +74,7 @@
  
  const dataPath = path.join(configDir(), 'settings.json')
  
 -const SHARED_ROOT = path.join(defaultDataRoot(), 'ComfyUI-Shared')
 +const SHARED_ROOT = process.env.SNAP_USER_COMMON || path.join(defaultDataRoot(), 'ComfyUI-Shared')
  
- /** Scalar shapes allowed as a telemetry property value. Arrays/objects are
-  *  never emitted (they'd leak paths/PII and blow up cardinality). */
+ export type SettingTelemetryValue = boolean | number | string | null
+ 
 diff --git a/src/main/sources/index.ts b/src/main/sources/index.ts
 --- a/src/main/sources/index.ts
 +++ b/src/main/sources/index.ts
@@ -162,7 +163,7 @@ diff --git a/src/main/sources/index.ts b/src/main/sources/index.ts
 diff --git a/src/renderer/src/panel/PanelApp.vue b/src/renderer/src/panel/PanelApp.vue
 --- a/src/renderer/src/panel/PanelApp.vue
 +++ b/src/renderer/src/panel/PanelApp.vue
-@@ -673,7 +673,7 @@
+@@ -522,7 +522,7 @@
          v-else-if="currentOverlay.component === 'first-use'"
          ref="firstUseRef"
          @complete-cloud="handleFirstUseComplete"
@@ -174,27 +175,24 @@ diff --git a/src/renderer/src/panel/PanelApp.vue b/src/renderer/src/panel/PanelA
 diff --git a/src/renderer/src/panel/useFirstUseChain.ts b/src/renderer/src/panel/useFirstUseChain.ts
 --- a/src/renderer/src/panel/useFirstUseChain.ts
 +++ b/src/renderer/src/panel/useFirstUseChain.ts
-@@ -54,7 +54,7 @@
-    *  back-to-dashboard button hides during a chain. */
+@@ -27,7 +27,7 @@
+ export interface FirstUseChainApi {
+   hooks: FirstUseChainHooks
    chainingFirstUseToNewInstall: Ref<boolean>
-   /** FirstUseTakeover `complete-skip` emit + file-menu Skip Onboarding. */
 -  completeFirstUseAndDismiss: () => Promise<void>
 +  completeFirstUseAndDismiss: (launchServer?: boolean) => Promise<void>
-   /** FirstUseTakeover `complete-cloud` emit. */
    handleFirstUseComplete: () => Promise<void>
-   /** FirstUseTakeover `chain-local` emit. Optional payload flags
-@@ -201,7 +201,7 @@
-    *  all run the same `markFirstUseCompleted` → dismiss sequence;
-    *  extracting the pair keeps them in sync if the gate flip ever
-    *  needs extra state cleanup. */
+   handleFirstUseChainLocal: (payload?: {
+     cameFromLocalBranch?: boolean
+@@ -81,11 +81,23 @@
+     }
+   }
+ 
 -  async function completeFirstUseAndDismiss(): Promise<void> {
 +  async function completeFirstUseAndDismiss(launchServer = false): Promise<void> {
-     // Clear chain state so the auto-launch watcher doesn't fire after
-     // a Skip Onboarding triggered mid-chain (the user wants OUT of
-     // onboarding, not to land on a freshly-installed Comfy).
-@@ -213,6 +213,18 @@
-     // new-install / progress takeover in the slot, so push it
-     // explicitly to keep the file-menu builder in steady state.
+     chainingFirstUseToNewInstall.value = false
+     pendingFirstUseAutoLaunchId.value = null
+     await launcherPrefs.markFirstUseCompleted()
      window.api.setFirstUseMode('none')
 +    if (launchServer) {
 +      try {
@@ -237,7 +235,7 @@ diff --git a/src/renderer/src/views/InstallWizardModal.vue b/src/renderer/src/vi
  
    return tabs
  })
-@@ -672,6 +677,9 @@
+@@ -577,6 +582,9 @@
    defaultInstPath.value = installDir ?? ''
    instPath.value = defaultInstPath.value
  
@@ -247,7 +245,7 @@ diff --git a/src/renderer/src/views/InstallWizardModal.vue b/src/renderer/src/vi
    if (managedBuildMode.value) {
      await Promise.all([initializeManagedBuilds(gen, refreshManagedBuilds), loadSources()])
    } else {
-@@ -734,7 +742,8 @@
+@@ -637,7 +645,8 @@
    await loadSources()
    if (gen !== modeGeneration || !localInstallMode.value) return
  

@@ -1,7 +1,7 @@
 diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
 --- a/src/main/lib/ipc/index.ts
 +++ b/src/main/lib/ipc/index.ts
-@@ -63,10 +63,37 @@
+@@ -68,10 +68,37 @@
    })
  }
  
@@ -40,7 +40,7 @@ diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
    const warnStartupWrite = (op: string) => (err: unknown) => {
      console.warn(`[ipc] Skipped startup installations ${op}:`, err)
    }
-@@ -93,7 +120,7 @@
+@@ -98,7 +125,7 @@
      .catch(warnStartupWrite('ensureExists(cloud)'))
    installations.enforceCloudName().catch(warnStartupWrite('enforceCloudName'))
  
@@ -52,7 +52,7 @@ diff --git a/src/main/lib/ipc/index.ts b/src/main/lib/ipc/index.ts
 diff --git a/src/main/lib/ipc/sessionActions/launch.ts b/src/main/lib/ipc/sessionActions/launch.ts
 --- a/src/main/lib/ipc/sessionActions/launch.ts
 +++ b/src/main/lib/ipc/sessionActions/launch.ts
-@@ -1482,7 +1482,7 @@
+@@ -1459,7 +1459,7 @@
      })
      try {
        await waitForUrl(launchCmd.url!, {
@@ -163,37 +163,34 @@ diff --git a/src/main/sources/index.ts b/src/main/sources/index.ts
 diff --git a/src/renderer/src/panel/PanelApp.vue b/src/renderer/src/panel/PanelApp.vue
 --- a/src/renderer/src/panel/PanelApp.vue
 +++ b/src/renderer/src/panel/PanelApp.vue
-@@ -522,7 +522,7 @@
-         v-else-if="currentOverlay.component === 'first-use'"
-         ref="firstUseRef"
-         @complete-cloud="handleFirstUseComplete"
+@@ -603,7 +603,7 @@
+         :saved-plan="savedSetup?.plan ?? null"
+         @install="handleSetupInstall"
+         @change="handleSetupChange"
 -        @complete-skip="completeFirstUseAndDismiss"
 +        @complete-skip="completeFirstUseAndDismiss(true)"
-         @chain-local="handleFirstUseChainLocal"
          @chain-migrate="handleFirstUseChainMigrate"
        />
+     </template>
 diff --git a/src/renderer/src/panel/useFirstUseChain.ts b/src/renderer/src/panel/useFirstUseChain.ts
 --- a/src/renderer/src/panel/useFirstUseChain.ts
 +++ b/src/renderer/src/panel/useFirstUseChain.ts
-@@ -27,7 +27,7 @@
- export interface FirstUseChainApi {
-   hooks: FirstUseChainHooks
+@@ -32,7 +32,7 @@
    chainingFirstUseToNewInstall: Ref<boolean>
+   setupConsent: Ref<SetupConsent | null>
+   savedSetup: Readonly<ShallowRef<SavedSetup | null>>
 -  completeFirstUseAndDismiss: () => Promise<void>
 +  completeFirstUseAndDismiss: (launchServer?: boolean) => Promise<void>
-   handleFirstUseComplete: () => Promise<void>
-   handleFirstUseChainLocal: (payload?: {
-     cameFromLocalBranch?: boolean
-@@ -81,11 +81,23 @@
+   handleSetupInstall: (plan: SetupPlan) => Promise<void>
+   handleSetupChange: (consent: SetupConsent) => Promise<void>
+   handleNewInstallConsentChange: (accepted: boolean) => void
+@@ -108,8 +108,20 @@
      }
    }
  
 -  async function completeFirstUseAndDismiss(): Promise<void> {
 +  async function completeFirstUseAndDismiss(launchServer = false): Promise<void> {
-     chainingFirstUseToNewInstall.value = false
-     pendingFirstUseAutoLaunchId.value = null
-     await launcherPrefs.markFirstUseCompleted()
-     window.api.setFirstUseMode('none')
+     await finishFirstUse()
 +    if (launchServer) {
 +      try {
 +        const all = await window.api.getInstallations()
@@ -212,7 +209,7 @@ diff --git a/src/renderer/src/panel/useFirstUseChain.ts b/src/renderer/src/panel
 diff --git a/src/renderer/src/views/InstallWizardModal.vue b/src/renderer/src/views/InstallWizardModal.vue
 --- a/src/renderer/src/views/InstallWizardModal.vue
 +++ b/src/renderer/src/views/InstallWizardModal.vue
-@@ -91,7 +91,10 @@
+@@ -135,7 +135,10 @@
  })
  const workspaceInstallMode = ref<'managed' | 'public'>('managed')
  const managedBuildMode = computed(
@@ -223,8 +220,8 @@ diff --git a/src/renderer/src/views/InstallWizardModal.vue b/src/renderer/src/vi
 +    workspaceInstallMode.value === 'managed'
  )
  const localInstallMode = computed(() => !managedBuildMode.value)
- 
-@@ -116,7 +119,9 @@
+ const setupPicked = computed(
+@@ -162,7 +165,9 @@
    const standaloneIndex = tabs.findIndex(
      (tab) => tab.kind === 'source' && tab.source.id === 'standalone'
    )
@@ -235,7 +232,7 @@ diff --git a/src/renderer/src/views/InstallWizardModal.vue b/src/renderer/src/vi
  
    return tabs
  })
-@@ -577,6 +582,9 @@
+@@ -600,6 +605,9 @@
    defaultInstPath.value = installDir ?? ''
    instPath.value = defaultInstPath.value
  
@@ -245,7 +242,7 @@ diff --git a/src/renderer/src/views/InstallWizardModal.vue b/src/renderer/src/vi
    if (managedBuildMode.value) {
      await Promise.all([initializeManagedBuilds(gen, refreshManagedBuilds), loadSources()])
    } else {
-@@ -637,7 +645,8 @@
+@@ -651,7 +659,8 @@
    await loadSources()
    if (gen !== modeGeneration || !localInstallMode.value) return
  
